@@ -22,7 +22,7 @@ def classify0(inX, dataSet, labels, k):
 
     for i in range(k):
         voteILabel = labels[sortedtDistIndicies[i]];                            #
-        classCount[voteILabel] = classCount.get(voteILabel, 0) + 1;             #   Vothing with lowest k distances
+        classCount[voteILabel] = classCount.get(voteILabel, 0) + 1;             #   Voting with lowest k distances
     # Sorting Dict.
     sortedClassCount = sorted(classCount.items(), key=operator.itemgetter(1), reverse=True);
     return sortedClassCount[0][0];
