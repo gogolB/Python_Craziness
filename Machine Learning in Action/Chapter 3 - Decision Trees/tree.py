@@ -1,35 +1,32 @@
 from math import log
 import operator
 
-# Function to calculate the Shannon entropy of a dataset.
-def calcShannonEnt(dataset):
-    numEntries = len(dataset);
-    labelCounts= {};
-    for featVec in dataset:
-        currentLabel = featVec[-1];
-        if currentLabel not in labelCounts.keys():
-            labelCounts[currentLabel] = 0;
-        labelCounts[currentLabel] += 1;
-
-    shannonEnt = 0.0;
-    for key in labelCounts.keys():
-        prob = float(labelCounts[key])/numEntries;
-        shannonEnt -= prob * log(prob,2);
-
-    return shannonEnt;
-
-# Function to create a test Dataset.
+# Creates a test Dataset.
 def createDataSet():
-    dataset = [[1, 1, 'yes'],
+    dataSet = [[1, 1, 'yes'],
                [1, 1, 'yes'],
                [1, 0, 'no'],
                [0, 1, 'no'],
                [0, 1, 'no']];
-    labels = ['no surface', 'flippers'];
+    labels = ['no surfacing','flippers'];
+    return dataSet, labels;
 
-    return dataset, labels;
+# Calcs the Shannon Entropy.
+def calcShannonEnt(dataSet):
+    numEntries = len(dataSet);
+    labelCounts = {};
+    for featVec in dataSet:
+        currentLabel = featVec[-1];
+        if currentLabel not in labelCounts.keys():
+            labelCounts[currentLabel] = 0;
+        labelCounts[currentLabel] += 1;
+    shannonEnt = 0.0
+    for key in labelCounts:
+        prob = float(labelCounts[key])/numEntries;
+        shannonEnt -= prob * log(prob,2);
+    return shannonEnt;
 
-# Dataset splitting on a given value
+# Splits a dataset on a axis.
 def splitDataSet(dataSet, axis, value):
     retDataSet = [];
     for featVec in dataSet:
@@ -39,38 +36,38 @@ def splitDataSet(dataSet, axis, value):
             retDataSet.append(reducedFeatVec);
     return retDataSet;
 
-# Chooseing the best feature to split on.
-def chooseBestFeatureToSplit(dataset):
-    numFeatures = len(dataset[0]) - 1;
-    baseEntropy = calcShannonEnt(dataset);
-    bestInfoGain = 0.0; bestFeature = -1;
+# Finds the best feature to split on.
+def chooseBestFeatureToSplit(dataSet):
+    numFeatures = len(dataSet[0]) - 1;
+    baseEntropy = calcShannonEnt(dataSet);
+    bestInfoGain = 0.0;
+    bestFeature = -1;
     for i in range(numFeatures):
-        featList = [example[i] for example in dataset];
+        featList = [example[i] for example in dataSet];
         uniqueVals = set(featList);
         newEntropy = 0.0;
         for value in uniqueVals:
-            subDataSet = splitDataSet(dataset, i, value);
-            prob = len(subDataSet)/float(len(dataset));
+            subDataSet = splitDataSet(dataSet, i, value);
+            prob = len(subDataSet)/float(len(dataSet));
             newEntropy += prob * calcShannonEnt(subDataSet);
         infoGain = baseEntropy - newEntropy;
-        if infoGain > bestInfoGain:
+        if (infoGain > bestInfoGain):
             bestInfoGain = infoGain;
             bestFeature = i;
-        return bestFeature;
+    return bestFeature;
 
-# Function to get the majority vote at a single location
+# Majority Vote.
 def majorityCnt(classList):
     classCount={};
     for vote in classList:
         if vote not in classCount.keys():
-            classCount = 0;
+            classCount[vote] = 0;
         classCount[vote] += 1;
-
-    sortedClassCount = sorted(classCount.items(), key=operator.itemgetter(1), reverse=true);
+    sortedClassCount = sorted(classCount.iteritems(), key=operator.itemgetter(1), reverse=True);
     return sortedClassCount[0][0];
 
-# Tree building code
-def createTree(dataSet, labels):
+# Creates a Tree from a dataset.
+def createTree(dataSet,labels):
     classList = [example[-1] for example in dataSet];
     if classList.count(classList[0]) == len(classList):
         return classList[0];
@@ -78,7 +75,7 @@ def createTree(dataSet, labels):
         return majorityCnt(classList);
     bestFeat = chooseBestFeatureToSplit(dataSet);
     bestFeatLabel = labels[bestFeat];
-    myTree = {bestFeatLabel:};
+    myTree = {bestFeatLabel:{}};
     del(labels[bestFeat]);
     featValues = [example[bestFeat] for example in dataSet];
     uniqueVals = set(featValues);
@@ -86,3 +83,37 @@ def createTree(dataSet, labels):
         subLabels = labels[:];
         myTree[bestFeatLabel][value] = createTree(splitDataSet(dataSet, bestFeat, value),subLabels);
     return myTree;
+
+# Classifies the test vector against the given tree.
+def classify(inputTree,featLabels,testVec):
+    firstStr = inputTree.keys()[0];
+    secondDict = inputTree[firstStr];
+    featIndex = featLabels.index(firstStr);
+    key = testVec[featIndex];
+    valueOfFeat = secondDict[key];
+    if isinstance(valueOfFeat, dict):
+        classLabel = classify(valueOfFeat, featLabels, testVec);
+    else:
+        classLabel = valueOfFeat;
+    return classLabel;
+
+# Puts a tree in storage.
+def storeTree(inputTree,filename):
+    import pickle
+    fw = open(filename,'w');
+    pickle.dump(inputTree,fw);
+    fw.close();
+
+# Gets a tree from storage.
+def grabTree(filename):
+    import pickle
+    fr = open(filename);
+    return pickle.load(fr);
+
+def lenseExample():
+    import treeplotter
+    fr = open('lenses.txt');
+    lenses=[inst.strip().split('\t') for inst in fr.readlines()];
+    lenseLabels = ['age', 'prescript', 'astigmatic', 'tearRate'];
+    lenseTree = createTree(lenses, lenseLabels);
+    treeplotter.createPlot(lenseTree);
