@@ -44,3 +44,6 @@ def lwlrTest(testArr, xArr, yArr, k=1.0):
     for i in range(m):
         yHat[i] = lwlr(testArr[i],xArr,yArr,k);
     return yHat;
+
+def rssError(yArr, yHatArr):
+    return ((yArr - yHatArr)**2).sum();
